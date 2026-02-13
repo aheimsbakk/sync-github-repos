@@ -123,8 +123,8 @@ API="https://api.github.com"
 PER_PAGE=100
 page=1
 
-if ! mkdir -p "$DEST_DIR/$USERNAME"; then
-  echo "Failed to create destination directory: $DEST_DIR/$USERNAME" >&2
+if ! mkdir -p "$DEST_DIR"; then
+  echo "Failed to create destination directory: $DEST_DIR" >&2
   exit 8
 fi
 logv "Destination base directory: $DEST_DIR"
@@ -176,7 +176,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   ssh_url=$(printf '%s' "$line" | jq -r '.ssh_url')
   clone_url=$(printf '%s' "$line" | jq -r '.clone_url')
 
-  repo_dir="$DEST_DIR/$USERNAME/$name"
+  repo_dir="$DEST_DIR/$name"
   if [[ "$USE_HTTPS" -eq 1 ]]; then
     url="$clone_url"
   else

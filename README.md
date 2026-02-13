@@ -76,7 +76,7 @@ GITHUB_TOKEN=ghp_... ./get-git-repos-for.sh octocat
 
 Behavior details
 ----------------
-- Destination directory: by default repositories are created under `./<username>/`. Use `-d DIR` / `--dest DIR` / `--dest-dir DIR` to set a different base directory. The script will create `DIR/<username>/` if it does not exist and will fail early if it cannot create that path.
+- Destination directory: by default repositories are created under `./`. Use `-d DIR` / `--dest DIR` / `--dest-dir DIR` to set a different base directory. The script will create `DIR` if it does not exist and will fail early if it cannot create that path. Repositories will be cloned directly into `DIR/<repo>` (no per-user subdirectory).
 - The script calls the GitHub REST API to list repositories using pagination (`per_page=100`).
 - By default, clones use the repository's SSH URL (`ssh_url`). Pass `--use-https` to use the HTTPS clone URL instead.
 - Existing repositories are not overwritten. The script runs `git fetch --prune --tags` for existing clones and will attempt `git pull --ff-only` only if the working tree is clean and the current HEAD points to a branch.
