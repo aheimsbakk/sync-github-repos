@@ -3,7 +3,7 @@
 #
 # Minimal dependencies: bash, git, curl, jq
 
-VERSION="0.1.0"
+VERSION="1.0.0"
 
 usage() {
   cat <<USAGE

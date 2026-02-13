@@ -8,3 +8,5 @@ tags: [scripts,workflow]
 ---
 
 Changed `get-git-repos-for.sh` so that repositories are placed directly under the destination directory provided with `-d/--dest` instead of creating a `DIR/<username>/` hierarchy. This simplifies backup layouts and matches common CLI expectations. Files changed: `get-git-repos-for.sh`, `README.md`.
+
+Version: 1.0.0 — MAJOR bump due to breaking change in repository layout (repos now cloned directly under destination directory rather than under `DEST/<username>/`).
