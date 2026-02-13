@@ -67,6 +67,10 @@ Automation suggestions
 - Pre-commit helper: a small script to create a new worklog from a template so authors don't accidentally add forbidden keys.
 - Optional: keep an off-repo audit log for sensitive provenance (commit SHAs, model versions). Reference the audit entry ID off-repo if needed; do not store it in the repo worklogs.
 
+- Auto-version helper: If this repository includes a helper script such as `scripts/bump-version.sh` or similar, agents MUST run that helper to update `VERSION` values following SemVer when they modify files that declare a `VERSION` variable. If a helper is present but fails, agents must not commit the change until they either fix the helper or manually update `VERSION` in a new commit accompanied by the required worklog entry.
+
+- Default policy when no helper exists: agents must update the `VERSION` variable manually following SemVer rules and include the new version string and short rationale in the worklog body. Prefer using helper scripts to avoid human error.
+
 Migration note
 - Historical worklogs that contain extra keys may be kept for audit/history. Configure CI to only enforce the rule on new or modified worklog files to avoid large-scale churn.
 
