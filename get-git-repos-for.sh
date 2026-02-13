@@ -163,9 +163,20 @@ if [[ "$USE_HTTPS" -eq 1 && -n "${GITHUB_TOKEN:-}" ]]; then
   fi
 fi
 
+# Determine API endpoint. When authenticated and the token belongs to the same
+# username we can use /user/repos to include private repositories.
+api_url="$API/users/$USERNAME/repos"
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  # discover authenticated username
+  me=$(curl -sS -H "Authorization: token ${GITHUB_TOKEN}" "$API/user" | jq -r '.login // empty' 2>/dev/null || true)
+  if [[ "$me" == "$USERNAME" ]]; then
+    api_url="$API/user/repos?visibility=all"
+  fi
+fi
+
 # Fetch repositories, paginated
 while :; do
-  url="$API/users/$USERNAME/repos?per_page=$PER_PAGE&page=$page"
+  url="$api_url?per_page=$PER_PAGE&page=$page"
   logv "Fetching $url"
   if ! resp=$(curl -sS "${auth_header[@]}" "$url"); then
     echo "Failed to fetch $url" >&2
