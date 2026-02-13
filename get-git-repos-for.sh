@@ -193,19 +193,14 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         logv "Repository has submodules; initializing"
         if [[ "$USE_HTTPS" -eq 1 ]]; then
           logv "Converting submodule URLs to HTTPS where necessary"
-          # Iterate submodule.url keys from the .gitmodules file
-          while IFS= read -r cfg; do
-            key=$(printf '%s' "$cfg" | awk '{print $1}')
-            val=$(printf '%s' "$cfg" | awk '{print $2}')
-            # Convert common SSH/git URL forms to HTTPS
-            newval=$(printf '%s' "$val" | sed -E 's#^git@github.com:(.+)$#https://github.com/\1#; s#^git://github.com/(.+)$#https://github.com/\1#')
-            if [[ "$newval" != "$val" ]]; then
-              logv "Updating submodule URL: $val -> $newval"
-              git -C "$repo_dir" config -f "$repo_dir/.gitmodules" "$key" "$newval" || true
-            fi
-          done < <(git -C "$repo_dir" config -f "$repo_dir/.gitmodules" --get-regexp '^submodule\..*\.url$' 2>/dev/null || true)
-          # Synchronize and update submodules
-          git -C "$repo_dir" submodule sync --recursive || true
+          if grep -qE 'git@github.com:|git://github.com/' "$repo_dir/.gitmodules" 2>/dev/null; then
+            cp "$repo_dir/.gitmodules" "$repo_dir/.gitmodules.bak" 2>/dev/null || true
+            sed -E -i 's#git@github.com:([^[:space:]]+)#https://github.com/\1#g; s#git://github.com/([^[:space:]]+)#https://github.com/\1#g' "$repo_dir/.gitmodules" || true
+            logv "Rewrote $repo_dir/.gitmodules to use HTTPS (backup at .gitmodules.bak)"
+            git -C "$repo_dir" submodule sync --recursive || true
+          else
+            logv "No SSH/git:// submodule URLs detected in .gitmodules"
+          fi
         fi
         if ! git -C "$repo_dir" submodule update --init --recursive; then
           echo "Warning: submodule update failed for $name; some submodules may not have been cloned." >&2
