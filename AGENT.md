@@ -74,6 +74,16 @@ Automation suggestions
 Migration note
 - Historical worklogs that contain extra keys may be kept for audit/history. Configure CI to only enforce the rule on new or modified worklog files to avoid large-scale churn.
 
+DIARY.md (context compaction)
+- When an agent determines that repository context should be compressed for easier review or storage, or when a user explicitly requests a compressed context, add a new entry to `DIARY.md` at the repository root.
+- Heading format: use a second-level heading with a timestamp formatted exactly as `## YYYY-MM-DD hh:mm` (24-hour time, zero-padded minutes). Example:
+
+  ## 2026-02-13 21:20
+
+- Entry content: a short, human-readable compressed summary (1–6 short lines). Prefer a single-line prefix like `Compressed log:` followed by concise bullets or a 1–3 sentence paragraph. Do NOT include secrets, full prompts, raw tokens, or extended provenance in DIARY entries.
+- DIARY entries complement — they do not replace — per-change worklogs under `agent/worklogs/`. Always create the required worklog for each commit; DIARY entries are optional and intended only for quick human reference and historical compaction.
+- Automation: agents may append DIARY entries automatically when performing compaction; if automated, ensure the entry is created before committing and include it in the same commit as the related changes so reviewers see the compressed context.
+
 FAQ
 - Q: Must the `model` field be present for all agent changes?
   - A: Yes — the `model` identifier (model family) must be present in the worklog front-matter. Do not include model versions or other model metadata in the repository worklog.
