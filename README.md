@@ -29,7 +29,7 @@ get-git-repos-for.sh [options] <github-username>
 
 Options:
   -h, --help             Show help and exit
-  --version              Print version and exit
+  -V, --version          Print version and exit
   -v                     Increase verbosity (can be used multiple times)
   --use-https            Use HTTPS clone URLs instead of SSH
   -d DIR, --dest DIR,

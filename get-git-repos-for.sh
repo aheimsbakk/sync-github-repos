@@ -44,7 +44,7 @@ while [[ $# -gt 0 ]]; do
       help
       exit 0
       ;;
-    --version)
+    -V|--version)
       echo "$(basename "$0") $VERSION"
       exit 0
       ;;
