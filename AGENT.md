@@ -3,6 +3,7 @@
 ## 1. Worklogs
 **Rule:** Every change requires a worklog file.
 - **Path:** `agent/worklogs/YYYY-MM-DD-HH-mm-{short-desc}.md`
+  - **Date and time:** Use `date` command to fetch date and time.
 - **Front Matter (Strict):** Must contain ONLY these keys:
   ```yaml
   ---
