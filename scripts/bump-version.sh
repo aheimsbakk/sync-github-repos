@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 # Bump VERSION in project files and create a worklog template
-# Usage: scripts/bump-version.sh <new-semver> [file1 file2 ...]
+# Usage: scripts/bump-version.sh [patch|minor|major] [file1 file2 ...]
 
 set -euo pipefail
 
 usage() {
   cat <<USAGE
-Usage: $(basename "$0") <new-version> [files...]
+Usage: $(basename "$0") <patch|minor|major> [files...]
 
-Updates VERSION="..." in the specified files (defaults to sync-github-repos.sh)
-and creates a worklog template under agent/worklogs documenting the bump.
+Increments the VERSION="x.y.z" field in the specified files (defaults to
+sync-github-repos.sh) according to SemVer rules and creates a worklog entry
+under docs/worklogs/.
+
+  patch  Increment Z in x.y.Z  (bug fixes, refactors)
+  minor  Increment Y in x.Y.0  (new features, enhancements)
+  major  Increment X in X.0.0  (breaking changes)
 USAGE
 }
 
@@ -18,35 +23,59 @@ if [[ ${#@} -lt 1 ]]; then
   exit 2
 fi
 
-new_version=$1
+bump_type=$1
 shift || true
 
-if ! [[ $new_version =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][A-Za-z0-9.-]+)?$ ]]; then
-  echo "Error: version must be SemVer (e.g. 1.2.3 or 1.2.3-alpha)" >&2
-  exit 3
-fi
+case "$bump_type" in
+  patch|minor|major) ;;
+  *)
+    echo "Error: bump type must be one of: patch, minor, major" >&2
+    usage
+    exit 3
+    ;;
+esac
 
-  files=("sync-github-repos.sh")
+files=("sync-github-repos.sh")
 if [[ $# -gt 0 ]]; then
-  files=()
-  while [[ $# -gt 0 ]]; do
-    files+=("$1")
-    shift
-  done
+  files=("$@")
 fi
 
+# Read current version from the first file that has one
+current_version=""
+for f in "${files[@]}"; do
+  if [[ -f "$f" ]] && grep -qE '^VERSION=' "$f"; then
+    current_version=$(grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+' "$f" || true)
+    break
+  fi
+done
+
+if [[ -z "$current_version" ]]; then
+  echo "Error: could not find VERSION=\"x.y.z\" in ${files[*]}" >&2
+  exit 4
+fi
+
+# Parse and increment
+IFS='.' read -r major minor patch <<< "$current_version"
+case "$bump_type" in
+  patch) patch=$((patch + 1)) ;;
+  minor) minor=$((minor + 1)); patch=0 ;;
+  major) major=$((major + 1)); minor=0; patch=0 ;;
+esac
+new_version="$major.$minor.$patch"
+
+echo "Bumping $current_version -> $new_version ($bump_type)"
+
+# Apply version to each file
 changed=()
 for f in "${files[@]}"; do
   if [[ ! -f "$f" ]]; then
     echo "Warning: file not found: $f" >&2
     continue
   fi
-  # Replace the first line that defines VERSION="..."
-  if grep -qE '^VERSION=.*' "$f"; then
+  if grep -qE '^VERSION=' "$f"; then
     tmp=$(mktemp)
-    # Use awk to only replace the first occurrence
     awk -v ver="$new_version" 'BEGIN{replaced=0} {
-      if(!replaced && $0 ~ /^VERSION=.*$/){ print "VERSION=\"" ver "\""; replaced=1; next }
+      if(!replaced && $0 ~ /^VERSION=/){ print "VERSION=\"" ver "\""; replaced=1; next }
       print $0
     }' "$f" > "$tmp"
     mv "$tmp" "$f"
@@ -62,25 +91,21 @@ if (( ${#changed[@]} == 0 )); then
   exit 0
 fi
 
-# Create worklog
+# Create worklog under docs/worklogs/ (per AGENTS.md)
 ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-wl_dir="agent/worklogs"
+wl_dir="docs/worklogs"
 mkdir -p "$wl_dir"
-wl_file="$wl_dir/$(date -u +%Y-%m-%d)-bump-version-$new_version.md"
+wl_file="$wl_dir/$(date -u +%Y-%m-%d-%H-%M)-bump-version-$new_version.md"
 cat > "$wl_file" <<WORKLOG
 ---
-date: $ts
-who: automated-bump
-why: Bump VERSION to $new_version
+when: $ts
+why: Bump VERSION to $new_version ($bump_type)
 what: Updated VERSION in files: ${changed[*]}
-model: github-copilot/gpt-5-mini
-tags: [version,bump]
+model: github-copilot/claude-sonnet-4.6
+tags: [version, bump, $bump_type]
 ---
 
-Bumped VERSION to $new_version in the following files:
-
-$(printf '%s
-
+Bumped VERSION from $current_version to $new_version ($bump_type) in: ${changed[*]}.
 Please add rationale and release notes before committing.
 WORKLOG
 
