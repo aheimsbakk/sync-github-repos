@@ -7,7 +7,7 @@
 3.0.0 (SemVer)
 
 ## Project Structure
-- **Main script:** `sync-github-repos.sh` (351 lines, executable Bash script)
+- **Main script:** `sync-github-repos.sh` (339 lines, executable Bash script)
 - **Documentation:** `README.md` (comprehensive user guide)
 - **Version management:** `scripts/bump-version.sh` (automated version bumping)
 - **Validation:** `scripts/validate-worklog.sh` (worklog format validator)
@@ -44,7 +44,7 @@
 
 ## Integration Points
 - Help text generation (lines 16-35 in sync-github-repos.sh)
-- Argument parsing loop (lines 42-101)
-- Submodule initialization logic (lines 261-290)
-- Clone command execution (line 257)
-- Summary reporting (lines 334-349)
+- Argument parsing loop (lines 38-95)
+- Submodule initialization logic (lines 248-278)
+- Clone command execution (line 245)
+- Summary reporting (lines 318-337)

@@ -3,7 +3,7 @@
 #
 # Minimal dependencies: bash, git, curl, jq
 
-VERSION="3.0.1"
+VERSION="3.0.2"
 
 usage() {
   cat <<USAGE
@@ -54,20 +54,10 @@ while [[ $# -gt 0 ]]; do
       VERBOSE=$((VERBOSE+1))
       shift
       ;;
-    -d)
+    -d|--dest)
       shift
       if [[ -z "$1" || "${1:0:1}" == "-" ]]; then
-        echo "Error: -d requires a directory argument" >&2
-        usage
-        exit 2
-      fi
-      DEST_DIR="$1"
-      shift
-      ;;
-    --dest)
-      shift
-      if [[ -z "$1" || "${1:0:1}" == "-" ]]; then
-        echo "Error: --dest requires a directory argument" >&2
+        echo "Error: -d/--dest requires a directory argument" >&2
         usage
         exit 2
       fi
@@ -259,7 +249,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
       log "Cloned $name"
       CLONED=$((CLONED+1))
       # Handle submodules. When using HTTPS, rewrite submodule URLs that use SSH (git@) or git://
-  if [[ $NO_SUBMODULES -eq 0 && -f "$repo_dir/.gitmodules" ]]; then
+      if [[ $NO_SUBMODULES -eq 0 && -f "$repo_dir/.gitmodules" ]]; then
         logv "Repository has submodules; initializing"
         if [[ "$USE_HTTPS" -eq 1 ]]; then
           logv "Converting submodule URLs to HTTPS where necessary"
@@ -270,15 +260,12 @@ while IFS= read -r line || [[ -n "$line" ]]; do
             # Sync .git/config submodule entries so subsequent operations use rewritten URLs
             "${git_cmd[@]}" -C "$repo_dir" submodule sync --recursive || true
             # Also update .git/config entries from .gitmodules where possible
-            if command -v git >/dev/null 2>&1; then
-              while read -r key value; do
-                # key is like "submodule.<name>.url"
-                if [[ -n "$key" && -n "$value" ]]; then
-                  # set the config to the new URL
-                  "${git_cmd[@]}" -C "$repo_dir" config "$key" "$value" || true
-                fi
-              done < <("git" -C "$repo_dir" config -f .gitmodules --get-regexp '^submodule\..*\.url$' 2>/dev/null | awk '{print $1" "$2}')
-            fi
+            while read -r key value; do
+              # key is like "submodule.<name>.url"
+              if [[ -n "$key" && -n "$value" ]]; then
+                "${git_cmd[@]}" -C "$repo_dir" config "$key" "$value" || true
+              fi
+            done < <("${git_cmd[@]}" -C "$repo_dir" config -f .gitmodules --get-regexp '^submodule\..*\.url$' 2>/dev/null | awk '{print $1" "$2}')
           else
             logv "No SSH/git:// submodule URLs detected in .gitmodules"
           fi
@@ -310,25 +297,25 @@ while IFS= read -r line || [[ -n "$line" ]]; do
       if [[ -z "$(git -C "$repo_dir" status --porcelain)" ]]; then
         branch=$(git -C "$repo_dir" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         if [[ -n "$branch" && "$branch" != "HEAD" ]]; then
-            if "${git_cmd[@]}" -C "$repo_dir" pull --ff-only; then
-              log "Updated $name (branch: $branch)"
-              UPDATED=$((UPDATED+1))
-            else
-              logv "Could not fast-forward $name (branch: $branch); manual intervention may be required."
-            fi
+          if "${git_cmd[@]}" -C "$repo_dir" pull --ff-only; then
+            log "Updated $name (branch: $branch)"
+            UPDATED=$((UPDATED+1))
+          else
+            logv "Could not fast-forward $name (branch: $branch); manual intervention may be required."
+          fi
         else
           logv "$name is in detached HEAD or has no branch; skipping pull."
         fi
-        else
+      else
         logv "Local changes present in $name; skipping pull to avoid overwriting local work."
         SKIPPED_LOCAL=$((SKIPPED_LOCAL+1))
       fi
-      else
-        echo "Path $repo_dir exists but is not a git repository; skipping." >&2
-        FAILED=$((FAILED+1))
-        FAILED_LIST+=("$name: path exists but not a git repository")
-        continue
-      fi
+    else
+      echo "Path $repo_dir exists but is not a git repository; skipping." >&2
+      FAILED=$((FAILED+1))
+      FAILED_LIST+=("$name: path exists but not a git repository")
+      continue
+    fi
   fi
 done < "$tmpfile"
 
