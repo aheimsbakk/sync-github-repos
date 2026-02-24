@@ -1,6 +1,6 @@
 ---
 when: 2026-02-24T18:36:44Z
-why: Implement breaking change to invert submodules default behavior for v3.0.0
+why: Implement breaking change to invert submodules default behavior for v3.0.0.
 what: Inverted submodules default from ON to OFF, replaced --no-submodules with --submodules flag
 model: github-copilot/claude-haiku-4.5
 tags: [feature,breaking-change,v3.0.0,submodules]
