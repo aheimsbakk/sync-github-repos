@@ -3,7 +3,7 @@
 #
 # Minimal dependencies: bash, git, curl, jq
 
-VERSION="2.0.0"
+VERSION="3.0.0"
 
 usage() {
   cat <<USAGE
@@ -22,7 +22,7 @@ Options:
   -V, --version          Print version and exit
   -v                     Increase verbosity (can be used multiple times)
   --use-https            Use HTTPS clone URLs instead of SSH
-  --no-submodules        Do not init/update submodules for repositories
+  --submodules, -s       Enable submodule initialization/updates (default: OFF)
   -d DIR, --dest DIR     Destination base directory for all repositories (default: current directory)
 
 Environment:
@@ -31,12 +31,13 @@ Environment:
 Examples:
   $(basename "$0") octocat
   $(basename "$0") --use-https -v octocat
+  $(basename "$0") --submodules -v octocat
 USAGE
 }
 
 VERBOSE=0
 USE_HTTPS=0
-NO_SUBMODULES=0
+NO_SUBMODULES=1
 DEST_DIR="."
 
 while [[ $# -gt 0 ]]; do
@@ -81,8 +82,8 @@ while [[ $# -gt 0 ]]; do
       USE_HTTPS=1
       shift
       ;;
-    --no-submodules)
-      NO_SUBMODULES=1
+    --submodules|-s)
+      NO_SUBMODULES=0
       shift
       ;;
     --)
