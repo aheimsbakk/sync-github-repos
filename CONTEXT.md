@@ -4,7 +4,7 @@
 `sync-github-repos.sh` is a lightweight Bash utility that clones or updates all GitHub repositories for a specific user or organization. It uses the GitHub REST API with optional token authentication and supports SSH or HTTPS clone URLs, submodule management, and customizable destination directories.
 
 ## Current Version
-2.0.0 (SemVer)
+2.1.0 (SemVer)
 
 ## Project Structure
 - **Main script:** `sync-github-repos.sh` (351 lines, executable Bash script)
