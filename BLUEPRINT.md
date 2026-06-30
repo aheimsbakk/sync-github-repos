@@ -1,160 +1,230 @@
 Blueprint for sync-github-repos.sh
 ===================================
 
-## Current Architecture
+## System Goals
 
-Purpose
--------
-Provide a small, dependable Bash script that clones or updates every GitHub repository for a single user (or organization-like user) to a local directory. The script will be simple to run, have clear command-line flags, and be usable in automation (CI, cron, manual runs).
+Provide a small, dependable Bash script that clones or updates every GitHub repository for a given user (or organization-like user) to a local directory. The script is designed for manual runs, cron jobs, and CI automation.
 
-Goals
------
-- Minimal runtime dependencies: `bash`, `curl`, `jq`, and `git`.
+## Goals
+
+- Minimal runtime dependencies: `bash`, `git`, `curl`, `jq`, `mktemp`.
 - Correctly handle GitHub API pagination and optional authentication via `GITHUB_TOKEN`.
-- Default to SSH clone URLs (so users with SSH keys get passwordless clones), with an explicit `--use-https` override.
-- Update existing clones by fetching/pruning tags and attempting safe fast-forward pulls when the working tree is clean.
-- Provide helpful `--help`, `--version`, and `-v` verbosity flag.
-- Default to **skipping submodules** unless explicitly enabled via `--submodules` flag.
+- Default to SSH clone URLs; support `--use-https` override.
+- Update existing clones via fetch/prune/tags and safe fast-forward pulls when the working tree is clean.
+- Provide `--help`, `--version`, and `-v` verbosity flag.
+- Skip submodules by default; enable with `--submodules`/`-s`.
 
-Non-Goals
----------
-- Performing repository-wide destructive operations (force updates, resets).
+## Non-Goals
+
+- Destructive repository operations (force updates, resets).
 - Managing branches beyond attempting a safe fast-forward on the current branch.
-- Syncing forks vs upstreams — script treats each repo as an independent clone of its origin.
+- Syncing forks vs upstreams.
 
-## CLI Specification (Version 3.0.0+)
+## Component Hierarchy
 
-Name: `sync-github-repos.sh`
-Usage: `sync-github-repos.sh [options] <github-username>`
-
-### Options
-- `-h`, `--help`: show help and exit
-- `-V`, `--version`: print version and exit
-- `-v`: increase verbosity (repeat for more verbosity)
-- `-d DIR`, `--dest DIR`: destination base directory (default: `.`)
-- `--use-https`: use HTTPS clone URLs instead of SSH
-- `--submodules`, `-s`: **[NEW]** enable submodule initialization/updates (default: OFF)
-
-### Removed Options
-- `--no-submodules`: **[DEPRECATED]** removed in favor of inverted default
-
-## Breaking Change Summary (Version 2.0.0 → 3.0.0)
-
-### Default Behavior Inversion
-- **OLD (v2.0.0):** Submodules initialized by default; `--no-submodules` to skip
-- **NEW (v3.0.0):** Submodules **skipped by default**; `--submodules`/`-s` to enable
-- **Impact:** BREAKING CHANGE requiring minor version bump (2.0.0 → 3.0.0)
-
-### Variable Changes
-- `NO_SUBMODULES` default: `0` → `1` (line 39)
-- Logic inversion: `if [[ $NO_SUBMODULES -eq 0 ]]` → `if [[ $NO_SUBMODULES -eq 0 ]]` (no change in logic, just default flip)
-
-## Implementation Plan
-
-### Files to Modify
-
-#### 1. **sync-github-repos.sh** (Main Script)
-**Section A: Variable Initialization (line 39)**
-- Change: `NO_SUBMODULES=0` → `NO_SUBMODULES=1`
-- Rationale: New default is "skip submodules"
-
-**Section B: Help Text (lines 16-35)**
-- Remove line 25: `--no-submodules        Do not init/update submodules for repositories`
-- Add new line: `--submodules, -s       Enable submodule initialization/updates (default: OFF)`
-- Update description: "Submodules are skipped by default. Use `--submodules` to enable."
-- Update usage line: Add `-s` to examples showing submodule behavior
-
-**Section C: Argument Parsing Loop (lines 42-101)**
-- Remove case block for `--no-submodules` (lines 84-87)
-- Add new case blocks for `--submodules` and `-s`:
-  ```
-  --submodules|-s)
-    NO_SUBMODULES=0
-    shift
-    ;;
-  ```
-
-**Section D: Summary Help Text (lines 8-14)**
-- Update short usage to remove `--no-submodules` reference if present
-
-**Section E: Clone Section (lines 261-290)**
-- **NO LOGIC CHANGES REQUIRED** - the condition `if [[ $NO_SUBMODULES -eq 0 ]]` will work correctly with new default
-- Submodules will only init when flag is explicitly passed
-
-#### 2. **README.md** (User Documentation)
-**Section A: Options Table (lines 23-30)**
-- Remove row: `| `--no-submodules` | Skip submodule initialization/updates. |`
-- Add row: `| `--submodules`, `-s` | Enable submodule initialization (default: OFF). |`
-- Update table header clarity
-
-**Section B: Behavior Details - Submodules Section (lines 61-63)**
-- Change heading: "Submodules" → "Submodules (OFF by Default)"
-- Update first bullet: "Auto-Update: **Disabled by default**. Use `--submodules` to enable recursive initialization and updates."
-- Remove/update references to "by default" auto-updating
-- Keep HTTPS rewriting section unchanged
-
-**Section C: Examples (lines 37-50)**
-- Add new example showing `--submodules` flag usage:
-  ```sh
-  # Clone with submodules enabled
-  ./sync-github-repos.sh --submodules -v octocat
-  ```
-
-**Section D: Migration Guide (NEW - add before "Roadmap")**
-Add section titled "Migration from v2.x to v3.0"
-- Explain breaking change: default submodule behavior inverted
-- Show old command → new command mappings:
-  - Old: `./sync-github-repos.sh user` (auto-init submodules) → New: `./sync-github-repos.sh --submodules user`
-  - Old: `./sync-github-repos.sh --no-submodules user` (skip) → New: `./sync-github-repos.sh user` (same effect, no flag needed)
-- Recommend scripts update all invocations to explicitly use `--submodules` if submodules are required
-
-#### 3. **Version Management**
-- Bump version using `scripts/bump-version.sh minor`
-- Old: 2.0.0 → New: 2.1.0 (or 3.0.0 if treating as MAJOR breaking change)
-- **Decision:** Use MINOR (2.1.0) per semver for behavior changes with migration path, OR MAJOR (3.0.0) for strict breaking change interpretation
-
-#### 4. **CONTEXT.md** (Already Created)
-- Update "Current Flag Structure" section to reflect new flags
-- Update "Known Variables" to note inverted default
-- Add note about breaking change in v3.0.0
-
-### Implementation Details
-
-**Condition Logic (NO CHANGE NEEDED):**
-```bash
-# Old code (still correct with new default):
-if [[ $NO_SUBMODULES -eq 0 ]]  # Execute submodule logic when flag is 0
 ```
-- With old default `NO_SUBMODULES=0`, submodules auto-init
-- With new default `NO_SUBMODULES=1`, submodules skip
-- When user passes `--submodules`, sets `NO_SUBMODULES=0`, submodules init
-- Logic remains identical; only variable initialization flips
+sync-github-repos.sh (single-file script)
+├── Argument Parsing
+│   ├── Short flags: -h, -V, -v, -d, -s
+│   ├── Long flags: --help, --version, --dest, --use-https, --submodules
+│   └── Positional: <github-username>
+├── Dependency Checker
+│   ├── git, curl, jq, mktemp
+│   └── Exits with code 3 if any missing
+├── Destination Setup
+│   ├── mkdir -p
+│   ├── Expand ~ to $HOME
+│   └── Resolve to absolute path via realpath or pwd
+├── Temporary File Management
+│   ├── mktemp
+│   └── trap cleanup on EXIT
+├── Authentication
+│   ├── GITHUB_TOKEN env var
+│   ├── API header injection
+│   └── git HTTP Basic Authorization header (HTTPS mode)
+├── API Endpoint Selection
+│   ├── Public: /users/{username}/repos
+│   └── Authenticated: /user/repos (all visibility, all affiliations)
+├── Repository Fetcher (Paginated)
+│   ├── per_page=100
+│   ├── Iterates pages until empty
+│   └── Extracts: name, ssh_url, clone_url, private
+├── Repository Processor (per repo)
+│   ├── Clone path
+│   │   ├── git clone (SSH or HTTPS)
+│   │   └── Submodule init (if --submodules)
+│   └── Update path
+│       ├── git fetch --prune --tags
+│       ├── Dirty-worktree guard (skip pull)
+│       ├── Detached-HEAD guard (skip pull)
+│       └── git pull --ff-only
+├── Submodule Handler
+│   ├── .gitmodules detection
+│   ├── SSH-to-HTTPS URL rewriting (--use-https)
+│   └── git submodule update --init --recursive
+└── Summary Reporter
+    └── Totals: Total, Cloned, Updated, Skipped, Submodule Warnings, Failed
+```
 
-### Testing Strategy
+## Data Flow
 
-1. **Default Behavior:** Run without flags → should NOT initialize submodules
-2. **Explicit Enable:** Run with `--submodules` → should initialize submodules
-3. **Short Form:** Run with `-s` → should work identically to `--submodules`
-4. **Help Text:** Verify `--help` shows new flag and OFF-by-default behavior
-5. **Error Cases:** Verify `--no-submodules` is no longer recognized (should error)
-6. **Migration Validation:** Test before/after scripts with token and HTTPS settings
+```
+User Input (CLI args)
+    │
+    ▼
+Argument Parser ──► USERNAME, DEST_DIR, FLAGS
+    │
+    ▼
+Dependency Check ──► Abort if missing
+    │
+    ▼
+Destination Setup ──► Absolute DEST_DIR
+    │
+    ▼
+Auth Setup ──► auth_header / git_cmd prefix
+    │
+    ▼
+API Endpoint ──► /users/{u}/repos OR /user/repos
+    │
+    ▼
+Paginated Fetch ──► tmpfile (JSON lines: name, ssh_url, clone_url, private)
+    │
+    ▼
+Per-Repo Loop ──► For each repo line:
+    │   ├─ Clone? git clone ──► process_submodules? ──► Done
+    │   └─ Update? git fetch ──► dirty? skip ──► detached? skip ──► git pull --ff-only
+    │
+    ▼
+Summary Output ──► Exit 0
+```
 
-### Backward Compatibility Notes
+## State Management
 
-- **Migration Path:** Scripts using `--no-submodules` will fail (flag no longer exists)
-  - Users must either: (a) remove flag (new default matches old behavior), or (b) add `--submodules` if submodules are required
-- **No Silent Failures:** Unrecognized flag causes exit code 2 (existing behavior preserved)
-- **Documentation:** README migration guide explains upgrade path clearly
+### Variables
 
----
+| Variable | Type | Default | Description |
+|---|---|---|---|
+| `VERSION` | string | `"3.0.3"` | Script version |
+| `SCRIPT_NAME` | string | basename of $0 | Script identifier |
+| `VERBOSE` | int | `0` | Verbosity level |
+| `USE_HTTPS` | int | `0` | HTTPS mode flag |
+| `NO_SUBMODULES` | int | `1` | Skip submodules flag |
+| `DEST_DIR` | string | `"."` | Destination base directory |
+| `USERNAME` | string | (from CLI) | GitHub username |
+| `tmpfile` | path | mktemp result | Temp file for repo list |
+| `TOTAL` | int | `0` | Repos discovered |
+| `CLONED` | int | `0` | Repos cloned |
+| `UPDATED` | int | `0` | Repos updated |
+| `SKIPPED_LOCAL` | int | `0` | Repos skipped (dirty) |
+| `FAILED` | int | `0` | Failed operations |
+| `SUBMODULE_WARN` | int | `0` | Submodule warnings |
+| `FAILED_LIST` | array | `()` | Failure details |
+| `auth_header` | array | `()` | curl auth header |
+| `git_cmd` | array | `(git)` | git command with optional headers |
+| `API` | string | `https://api.github.com` | API base URL |
+| `PER_PAGE` | int | `100` | API pagination size |
+| `api_url` | string | `/users/{u}/repos` | API endpoint |
+| `page` | int | `1` | Current API page |
+| `auth_b64` | string | `""` | Base64 auth token for HTTPS |
 
-## Archive
+### Exit Codes
 
-### v2.0.0 Flag Structure
-- `--no-submodules`: Skip submodule initialization (set `NO_SUBMODULES=1`)
-- Default behavior: Submodules auto-initialized (default `NO_SUBMODULES=0`)
+| Code | Meaning |
+|---|---|
+| 0 | Success |
+| 2 | Usage error (bad args, missing username) |
+| 3 | Missing dependency |
+| 4 | Temp file creation failed |
+| 5 | API fetch failed |
+| 6 | GitHub API error (message from response) |
+| 7 | Unexpected API response |
+| 8 | Destination directory creation failed |
 
-### Legacy Requirements (Pre-v3.0.0)
-- Auto-init submodules by default
-- Allow `--no-submodules` to disable
-- Recursively process submodules with HTTPS rewriting
+## Contracts
+
+### CLI Interface
+
+```
+Usage: sync-github-repos.sh [options] <github-username>
+
+Options:
+  -h, --help             Show help and exit
+  -V, --version          Print version and exit
+  -v                     Increase verbosity (repeatable)
+  --use-https            Use HTTPS clone URLs instead of SSH
+  --submodules, -s       Enable submodule initialization/updates (default: OFF)
+  -d DIR, --dest DIR     Destination base directory (default: current directory)
+```
+
+### Payload Schema (API Response Extraction)
+
+Each repo line in the temp file is a JSON object:
+
+```json
+{
+  "name": "<string>",
+  "ssh_url": "<string>",
+  "clone_url": "<string>",
+  "private": <boolean>
+}
+```
+
+### Environment Variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `GITHUB_TOKEN` | No | GitHub personal access token for rate limits and private repos |
+
+## Persistence
+
+- **No persistent storage.** The script operates as a stateless batch job.
+- **Temporary file:** Created via `mktemp`, cleaned up via `trap` on EXIT.
+- **Side effects:** Git repositories cloned/updated in `DEST_DIR`.
+
+## Error Boundaries
+
+- **Fatal errors** (dependency missing, API failure, directory creation failure) cause immediate exit with a non-zero code.
+- **Per-repo failures** are collected in `FAILED_LIST`, logged to stderr, and the script continues processing remaining repositories.
+- **Submodule failures** produce a warning in `FAILED_LIST` and increment `SUBMODULE_WARN` without aborting other repos.
+
+## External Dependencies
+
+### Runtime Commands
+
+| Command | Used For |
+|---|---|
+| `bash` | Script interpreter |
+| `git` | Repository cloning, fetching, updating, submodules |
+| `curl` | GitHub API requests |
+| `jq` | JSON parsing of API responses |
+| `mktemp` | Temporary file creation |
+| `realpath` | Path resolution (optional; falls back to `cd + pwd`) |
+| `base64` / `python3` / `openssl` | Base64 encoding for HTTPS auth (fallback chain) |
+
+### API Endpoints
+
+| Endpoint | Condition | Purpose |
+|---|---|---|
+| `GET /users/{username}/repos` | No token or unauthenticated | Public repos only |
+| `GET /user/repos?visibility=all&affiliation=owner,collaborator,organization_member` | Authenticated as the target user | All repos (public + private) |
+
+### Authentication Flow
+
+1. If `GITHUB_TOKEN` is set, authenticate via `Authorization: token` header.
+2. Verify token ownership by calling `GET /user` and comparing `login` to `USERNAME`.
+3. If authenticated, switch to `/user/repos` endpoint for private repo access.
+4. For HTTPS mode with token, inject `http.extraHeader=Authorization: Basic <base64>` into git config using `x-access-token:<token>` as credentials.
+
+## Submodule Handling
+
+### Trigger
+
+Enabled only when `--submodules` or `-s` flag is passed (`NO_SUBMODULES=0`).
+
+### Process
+
+1. Check for `.gitmodules` file in the cloned repository.
+2. If `--use-https` is active, rewrite SSH URLs (`git@github.com:...` and `git://github.com/...`) to HTTPS in `.gitmodules`, with a `.bak` backup.
+3. Run `git submodule sync --recursive`.
+4. Run `git submodule update --init --recursive`.
+5. On failure, log warning to `FAILED_LIST` and increment `SUBMODULE_WARN`.
