@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-VERSION="3.0.3"
+VERSION="3.1.0"
 
 SCRIPT_NAME="$(basename "$0")"
 
