@@ -10,9 +10,10 @@
 - **Main script:** `sync-github-repos.sh` (~270 lines, executable Bash script)
 - **Documentation:** `README.md` (comprehensive user guide)
 - **Version management:** `scripts/bump-version.sh` (automated version bumping)
-- **Validation:** `scripts/validate-worklog.sh` (worklog format validator)
-- **Architecture:** `BLUEPRINT.md`
-- **Agent framework:** `agents/` directory with rules, templates, and prompts
+- **Release history:** `CHANGELOG.md` (replaces the retired worklog convention)
+- **Validation:** `scripts/validate-changelog.sh` (changelog format validator) and `scripts/verify_codebase_sync.sh` (path map gate)
+- **Architecture:** `BLUEPRINT.md` and `CODEBASE.md`
+- **Agent framework:** `.opencode/agents/` and `.opencode/skills/` with rules and prompts
 
 ## Dependencies
 - Bash 4+
