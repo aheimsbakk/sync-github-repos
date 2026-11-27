@@ -13,6 +13,8 @@ Provide a small, dependable Bash script that clones or updates every GitHub repo
 - Update existing clones via fetch/prune/tags and safe fast-forward pulls when the working tree is clean.
 - Provide `--help`, `--version`, and `-v` verbosity flag.
 - Skip submodules by default; enable with `--submodules`/`-s`.
+- Provide a local test framework under `tests/` with offline contract
+  suites and an opt-in network integration suite.
 
 ## Non-Goals
 
@@ -123,6 +125,7 @@ Summary Output ──► Exit 0
 | `git_cmd` | array | `(git)` | git command with optional headers |
 | `API` | string | `https://api.github.com` | API base URL |
 | `PER_PAGE` | int | `100` | API pagination size |
+| `curl_timeout` | array | `--connect-timeout 10 --max-time 60` | Timeout bounds on every curl call |
 | `api_url` | string | `/users/{u}/repos` | API endpoint |
 | `page` | int | `1` | Current API page |
 | `auth_b64` | string | `""` | Base64 auth token for HTTPS |
@@ -184,6 +187,7 @@ Each repo line in the temp file is a JSON object:
 ## Error Boundaries
 
 - **Fatal errors** (dependency missing, API failure, directory creation failure) cause immediate exit with a non-zero code.
+- **Network timeouts:** Every API call via `curl` is bounded by a 10-second connect timeout and a 60-second total timeout, so a hung connection fails as an API error (code 5) instead of stalling the batch.
 - **Per-repo failures** are collected in `FAILED_LIST`, logged to stderr, and the script continues processing remaining repositories.
 - **Submodule failures** produce a warning in `FAILED_LIST` and increment `SUBMODULE_WARN` without aborting other repos.
 
@@ -228,3 +232,63 @@ Enabled only when `--submodules` or `-s` flag is passed (`NO_SUBMODULES=0`).
 3. Run `git submodule sync --recursive`.
 4. Run `git submodule update --init --recursive`.
 5. On failure, log warning to `FAILED_LIST` and increment `SUBMODULE_WARN`.
+
+## Test Framework
+
+A self-contained test framework under `tests/` verifies every change with no
+runtime dependencies beyond the existing ones. Default runs stay offline and
+finish in seconds.
+
+### Component Hierarchy
+
+```
+Test Framework (tests/)
+├── Test Runner
+│   ├── Suite discovery: files named tests/<name>-test.sh
+│   ├── Optional name-filter argument
+│   ├── Per-suite isolated process with a 300-second bound
+│   ├── Sandbox lifecycle: create tmp/tests/ before, remove after
+│   └── Aggregate totals and process exit status
+├── Assertion Library (shared)
+│   ├── Counters: passed, failed, skipped
+│   ├── Exit-code, output-pattern, and condition assertions
+│   ├── Network-availability probe (10-second bound)
+│   └── Machine-parseable suite summary line
+├── CLI Contract Suite (offline): argument parsing, help/version, usage-error codes
+├── Utility Scripts Suite (offline): bump arithmetic, file-mode preservation,
+│   changelog validator, codebase sync validator
+├── API Contract Suite (network; auto-skips when offline): API error
+│   propagation, destination setup, pagination request
+└── Integration Suite (network; only when RUN_INTEGRATION=1): clone path,
+    update path, and dirty-worktree skip guard against a real GitHub user
+```
+
+### Contracts
+
+Runner:
+
+```
+tests/run.sh [name-filter]
+Exit: 0 = no failures (skips allowed)
+      1 = at least one failure or crashed suite
+      2 = usage error
+```
+
+Suite: standalone executable script; loads the assertion library; emits as
+its final line `RESULT: <n> passed, <n> failed, <n> skipped`; exits 1 when
+the failed count is greater than zero. The runner treats a missing summary
+line as a suite crash.
+
+### State Management
+
+- All suite side effects stay inside a per-run sandbox under `tmp/tests/`.
+- Network-dependent suites probe reachability first and skip as a whole
+  when unreachable, keeping default runs deterministic.
+- The integration suite bounds each sync pass with a hard time box so the
+  amount of downloaded repository data stays finite.
+
+### Environment Variables
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `RUN_INTEGRATION` | No | Set to `1` to enable the network integration suite |
