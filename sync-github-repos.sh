@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-VERSION="3.0.3"
+VERSION="3.1.0"
 
 SCRIPT_NAME="$(basename "$0")"
 
@@ -217,10 +217,13 @@ fi
 
 API="https://api.github.com"
 PER_PAGE=100
+# Timeouts bound every GitHub API call so a dropped or hung connection fails
+# fast instead of stalling the whole batch (cron/CI safety).
+curl_timeout=(--connect-timeout 10 --max-time 60)
 
 api_url="$API/users/$USERNAME/repos"
 if [[ -n "${GITHUB_TOKEN:-}" ]]; then
-	me="$(curl -sS -H "Authorization: token ${GITHUB_TOKEN}" "$API/user" |
+	me="$(curl -sS "${curl_timeout[@]}" -H "Authorization: token ${GITHUB_TOKEN}" "$API/user" |
 		jq -r '.login // empty' 2>/dev/null || true)"
 	if [[ "$me" == "$USERNAME" ]]; then
 		api_url="$API/user/repos?visibility=all&affiliation=owner,collaborator,organization_member"
@@ -241,7 +244,7 @@ while :; do
 	fi
 	logv "Fetching $url"
 
-	resp="$(curl -sS "${auth_header[@]}" "$url")" ||
+	resp="$(curl -sS "${curl_timeout[@]}" "${auth_header[@]}" "$url")" ||
 		{
 			echo "Failed to fetch $url" >&2
 			exit 5
