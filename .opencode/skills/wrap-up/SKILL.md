@@ -1,6 +1,6 @@
 ---
 name: wrap-up
-description: Apply end-of-task ceremony for changelog, version bumping, and git commits. Use when a task is complete and ready for finalization — after the user says "wrap up", "commit", or "done", or when the Builder hands off to QA.
+description: Apply end-of-task ceremony for changelog, version bumping, and git commits. Use when a task is complete and ready for finalization — after the user says "wrap up", "commit", or "done".
 ---
 
 ## What this skill does
@@ -109,8 +109,7 @@ Before committing, ensure the repository is clean:
 - Add temporary build artifacts, dependency caches, and error logs (e.g.
   `.qa-error.log`) to `.gitignore`.
 - **Never** add source code, configuration files (including `VERSION`), or
-  documentation directories (including `docs/worklogs/` if present) to
-  `.gitignore`. These must remain tracked by Git.
+  documentation directories to `.gitignore`. These must remain tracked by Git.
 
 ---
 

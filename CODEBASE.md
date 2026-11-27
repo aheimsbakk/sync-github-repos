@@ -8,22 +8,30 @@ Codebase Map for sync-github-repos.sh
 ├── AGENTS.md                          # Agent workflow rules
 ├── BLUEPRINT.md                       # Architecture specification (this file's counterpart)
 ├── CHANGELOG.md                       # Version history
+├── CONTRIBUTING.md                    # Developer guide: setup, scripts, workflow
 ├── README.md                          # User documentation
 ├── opencode.json                      # Editor configuration
 ├── .gitignore                         # Git ignore rules
 ├── sync-github-repos.sh               # Main script (entry point)
 ├── scripts/
 │   ├── bump-version.sh                # Version bumping utility
-│   └── validate-worklog.sh            # Worklog format validator
+│   ├── validate-changelog.sh          # Changelog format validator
+│   └── verify_codebase_sync.sh        # CODEBASE.md path verifier
+├── docs/
+│   └── memory/                        # Agent decision archive (INDEX.md + archive/)
+├── tests/
+│   ├── run.sh                         # Test framework entry point
+│   ├── lib/assert.sh                  # Shared assertion helpers
+│   ├── sync-cli-test.sh               # CLI contract suite (offline)
+│   ├── sync-api-test.sh               # API contract suite (network, auto-skip)
+│   ├── sync-integration-test.sh       # Integration suite (RUN_INTEGRATION=1)
+│   └── utility-scripts-test.sh        # Utility scripts contract suite (offline)
 └── .opencode/
-    ├── .gitignore                     # Opencode git ignore
     ├── agents/
     │   ├── facts.md                   # Facts agent definition
     │   ├── linux-expert.md            # Linux expert agent definition
     │   ├── reflect.md                 # Reflect agent definition
     │   └── vibe.md                    # Vibe agent definition
-    ├── package.json                   # Opencode node dependencies
-    ├── package-lock.json              # Lockfile
     ├── RULES.md                       # Project-specific rules
     ├── skills/
     │   ├── clear-language/SKILL.md     # Plain language skill
@@ -49,14 +57,22 @@ Codebase Map for sync-github-repos.sh
 | Temp File Management | `sync-github-repos.sh` (lines 160-164) |
 | Counter Initialization | `sync-github-repos.sh` (lines 170-177) |
 | Authentication | `sync-github-repos.sh` (lines 182-212) |
-| API Endpoint Selection | `sync-github-repos.sh` (lines 218-229) |
-| Paginated Fetch | `sync-github-repos.sh` (lines 235-269) |
-| Submodule Handler | `sync-github-repos.sh` (lines 275-309) |
-| Repository Processor | `sync-github-repos.sh` (lines 311-367) |
-| Summary Reporter | `sync-github-repos.sh` (lines 373-388) |
+| API Endpoint Selection | `sync-github-repos.sh` (lines 221-232) |
+| Paginated Fetch | `sync-github-repos.sh` (lines 238-272) |
+| Submodule Handler | `sync-github-repos.sh` (lines 278-312) |
+| Repository Processor | `sync-github-repos.sh` (lines 314-370) |
+| Summary Reporter | `sync-github-repos.sh` (lines 376-391) |
 | Version Bumping Utility | `scripts/bump-version.sh` |
-| Worklog Validation | `scripts/validate-worklog.sh` |
+| Changelog Validation | `scripts/validate-changelog.sh` |
+| Codebase Sync Verification | `scripts/verify_codebase_sync.sh` |
+| Test Runner | `tests/run.sh` |
+| Assertion Library | `tests/lib/assert.sh` |
+| CLI Contract Suite | `tests/sync-cli-test.sh` |
+| API Contract Suite | `tests/sync-api-test.sh` |
+| Integration Suite | `tests/sync-integration-test.sh` |
+| Utility Scripts Suite | `tests/utility-scripts-test.sh` |
 | User Documentation | `README.md` |
+| Developer Documentation | `CONTRIBUTING.md` |
 | Changelog | `CHANGELOG.md` |
 
 ### Opencode Configuration
@@ -80,7 +96,8 @@ Codebase Map for sync-github-repos.sh
 
 ### Naming Conventions
 
-- **Files:** kebab-case (`sync-github-repos.sh`, `bump-version.sh`, `validate-worklog.sh`)
+- **Files:** kebab-case (`sync-github-repos.sh`, `scripts/bump-version.sh`, `scripts/validate-changelog.sh`). Exception: `scripts/verify_codebase_sync.sh` uses snake_case because `AGENTS.md` mandates that exact name.
+- **Test suites:** kebab-case files with a -test.sh suffix, under `tests/`
 - **Variables:** UPPER_SNAKE_CASE (`VERBOSE`, `USE_HTTPS`, `DEST_DIR`)
 - **Functions:** snake_case (`usage`, `help`, `log`, `logv`, `logvv`, `process_submodules`)
 - **Environment:** UPPER_SNAKE_CASE (`GITHUB_TOKEN`)
@@ -91,7 +108,9 @@ Codebase Map for sync-github-repos.sh
 |---|---|
 | Main script | `sync-github-repos.sh` |
 | Version bump | `scripts/bump-version.sh` |
-| Worklog validation | `scripts/validate-worklog.sh` |
+| Changelog validation | `scripts/validate-changelog.sh` |
+| Codebase sync check | `scripts/verify_codebase_sync.sh` |
+| Test framework | `tests/run.sh` |
 
 ## Version
 
